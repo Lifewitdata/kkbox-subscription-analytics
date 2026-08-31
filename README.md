@@ -128,12 +128,11 @@ tail estimates) → exponential-decay extrapolation → break-even CAC table.
 ## 🚀 Getting Started
 
 ```bash
-git clone https://github.com/https://github.com/Lifewitdata/YOUR_REPO.git
+git clone https://github.com/Lifewitdata/kkbox-subscription-analytics.git
 cd YOUR_REPO
 pip install pandas numpy matplotlib seaborn scikit-learn xgboost jupyter
 
-# regenerate synthetic data (optional - CSVs are already included)
-python generate_v2_data.py
+
 
 jupyter notebook kkbox_churn_modeling_v2.ipynb
 ```
