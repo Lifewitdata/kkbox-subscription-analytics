@@ -133,3 +133,39 @@ def test_retention_assignment_is_reproducible_and_balanced():
     pd.testing.assert_frame_equal(first, second)
     counts = first.groupby(["stratum", "assigned_treatment"]).size().unstack(fill_value=0)
     assert (counts.max(axis=1) - counts.min(axis=1)).max() <= 1
+
+
+def test_grouped_importance_groups_correlated_columns():
+    from analyze_feature_importance import correlated_groups
+
+    frame = pd.DataFrame({
+        "numeric_a": np.arange(100, dtype=float),
+        "numeric_b": np.arange(100, dtype=float) * 2 + 1,
+        "channel": ["A", "B"] * 50,
+        "channel_copy": ["A", "B"] * 50,
+        "independent": np.random.default_rng(4).normal(size=100),
+    })
+    groups = correlated_groups(frame, threshold=0.85)
+    flattened = [column for group in groups for column in group]
+    assert sorted(flattened) == sorted(frame.columns.tolist())
+    assert any({"numeric_a", "numeric_b"}.issubset(set(group)) for group in groups)
+    assert any({"channel", "channel_copy"}.issubset(set(group)) for group in groups)
+
+
+def test_24_month_validation_records_small_sample_and_bootstrap_limits():
+    result = json.loads(
+        (ROOT / "results" / "ltv" / "out_of_time_24m_validation.json").read_text()
+    )
+    assert result["fold_count"] == 2
+    assert result["training_and_holdout_subscribers"] == 1509
+    assert result["target_horizon"] == "24 calendar months"
+    assert result["subscriber_bootstrap_wape_95_low"] < result["subscriber_bootstrap_wape_95_high"]
+    assert "does not include model" in result["bootstrap_note"]
+
+
+def test_sample_size_planner_returns_balanced_two_arm_design():
+    from plan_retention_experiment import calculate_sample_size
+
+    result = calculate_sample_size(0.80, 0.03, alpha=0.05, power=0.80, nonresponse_rate=0.05)
+    assert result["required_total_assignments"] == 2 * result["required_assignments_per_arm"]
+    assert result["required_assignments_per_arm"] >= result["required_evaluable_per_arm"]
