@@ -62,12 +62,12 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin "$GITHUB_REF_NAME"
-          git pull --rebase origin "$GITHUB_REF_NAME"
           git add models/ results/ dashboard_screenshots/
           if git diff --cached --quiet; then
             echo "Generated outputs are already current."
           else
             git commit -m "chore: commit verified synthetic outputs [generated outputs]"
-            git push
+            git fetch origin "$GITHUB_REF_NAME"
+            git rebase "origin/$GITHUB_REF_NAME"
+            git push origin "HEAD:$GITHUB_REF_NAME"
           fi
