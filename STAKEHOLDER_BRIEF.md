@@ -12,7 +12,7 @@ Use risk with subscriber eligibility, contribution margin, contact policy and tr
 
 ## Acquisition channel decisions
 
-Use the six-month observed LTV and its out-of-time cohort validation as separate diagnostics. It is not the previous 24-month decay extrapolation validation. Do not rank channels using revenue per subscriber alone: acquisition cost, contribution margin, refunds, cohort maturity, attribution and channel mix must be aligned to the same acquisition cohort and measurement window.
+Use the six-month observed LTV and the 24-month rolling backtest as separate diagnostics. The 24-month decay scenario backtest has only two monthly hold-out folds and 1,509 validation subscribers; WAPE is 57.63%, with mean forecast bias of +1,099.89 source amount units per subscriber. It materially over-forecasts on this small synthetic sample and should not be used for a channel or CAC decision. The 54.07%–61.42% subscriber bootstrap interval does not include decay-model, cohort, attribution, margin or synthetic-data uncertainty. Do not rank channels using revenue per subscriber alone: acquisition cost, contribution margin, refunds, cohort maturity, attribution and channel mix must be aligned to the same acquisition cohort and measurement window.
 
 For a real decision, calculate by channel:
 - matured cohort size and retention at 1/3/6/12 months;
@@ -24,7 +24,7 @@ Set allowable CAC from a conservative lower bound of contribution LTV divided by
 
 ## Retention intervention evaluation
 
-The repository includes an intention-to-treat evaluator that requires random assignment and a pre-defined outcome such as 30-day retained-and-paying status. It does not contain offer assignment, redemption, or post-offer outcome data. The committed placebo check is only a design demonstration using historical labels; it is not an experiment and cannot establish uplift.
+The repository includes a prospective sample-size planner, stratified assignment generator, experiment template and intention-to-treat evaluator. It does not contain a real eligible-subject population, delivered offer, randomized assignment or post-offer outcome data. The committed placebo check is only a code/design demonstration using historical labels; it is not an experiment and cannot establish uplift.
 
 A real test should:
 - randomize eligible subscribers to offer and control before messaging;
@@ -41,6 +41,6 @@ Candidate actions to test include renewal reminders for non-auto-renew subscribe
 2. Create a point-in-time feature contract and repeated out-of-time churn validation.
 3. Validate 6/12-month contribution LTV on later matured cohorts and quantify attribution, margin and decay uncertainty.
 4. Join actual acquisition spend to acquired customers with an agreed attribution definition.
-5. Run a randomized retention experiment and evaluate intention-to-treat impact.
+5. Launch the approved prospective experiment using authorised eligible subscribers, preserve the randomized assignment, wait for the complete outcome window and evaluate intention-to-treat impact.
 
 **Decision:** no channel or retention action should be recommended for real investment from this synthetic dataset.
