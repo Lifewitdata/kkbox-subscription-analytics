@@ -14,6 +14,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_auc_score
+from scipy.stats import chi2_contingency
 
 from train_churn_model import (
     MODEL_PATH, RESULTS, build_features, chronological_split,
@@ -26,14 +27,14 @@ RANDOM_STATE = 20261103
 
 
 def correlated_groups(X_train: pd.DataFrame, threshold: float = CORRELATION_THRESHOLD) -> list[list[str]]:
-    numeric = X_train.select_dtypes(include=[np.number]).copy()
-    numeric = numeric.replace([np.inf, -np.inf], np.nan)
-    numeric = numeric.fillna(numeric.median()).dropna(axis=1, how="all")
-    if numeric.shape[1] == 0:
-        return [[column] for column in X_train.columns]
+    """Group strongly associated inputs using training data only.
 
-    corr = numeric.corr(method="spearman").abs().fillna(0.0)
-    parent = {column: column for column in numeric.columns}
+    Numeric/numeric association uses absolute Spearman correlation.
+    Categorical/categorical association uses bias-corrected Cramer's V.
+    Numeric/categorical association uses the correlation ratio (eta).
+    """
+    columns = list(X_train.columns)
+    parent = {column: column for column in columns}
 
     def find(x: str) -> str:
         while parent[x] != x:
@@ -46,23 +47,63 @@ def correlated_groups(X_train: pd.DataFrame, threshold: float = CORRELATION_THRE
         if ra != rb:
             parent[rb] = ra
 
-    columns = list(numeric.columns)
-    for i, left in enumerate(columns):
-        for right in columns[i + 1:]:
-            if corr.loc[left, right] >= threshold:
+    numeric_cols = X_train.select_dtypes(include=[np.number]).columns.tolist()
+    categorical_cols = [c for c in columns if c not in numeric_cols]
+    numeric = X_train[numeric_cols].replace([np.inf, -np.inf], np.nan)
+    if numeric_cols:
+        numeric = numeric.fillna(numeric.median())
+        corr = numeric.corr(method="spearman").abs().fillna(0.0)
+        for i, left in enumerate(numeric_cols):
+            for right in numeric_cols[i + 1:]:
+                if corr.loc[left, right] >= threshold:
+                    union(left, right)
+
+    # Bias-corrected Cramer's V for two categorical columns.
+    def cramers_v(left: pd.Series, right: pd.Series) -> float:
+        frame = pd.DataFrame({"left": left.astype("string").fillna("__MISSING__"),
+                              "right": right.astype("string").fillna("__MISSING__")})
+        table = pd.crosstab(frame["left"], frame["right"])
+        if min(table.shape) < 2:
+            return 0.0
+        chi2 = chi2_contingency(table, correction=False)[0]
+        n = table.to_numpy().sum()
+        if n <= 1:
+            return 0.0
+        phi2 = chi2 / n
+        r, k = table.shape
+        phi2_corr = max(0.0, phi2 - ((k - 1) * (r - 1)) / (n - 1))
+        r_corr = r - ((r - 1) ** 2) / (n - 1)
+        k_corr = k - ((k - 1) ** 2) / (n - 1)
+        denom = min(k_corr - 1, r_corr - 1)
+        return float(np.sqrt(phi2_corr / denom)) if denom > 0 else 0.0
+
+    for i, left in enumerate(categorical_cols):
+        for right in categorical_cols[i + 1:]:
+            if cramers_v(X_train[left], X_train[right]) >= threshold:
                 union(left, right)
 
-    grouped_numeric: dict[str, list[str]] = {}
-    for column in numeric.columns:
-        grouped_numeric.setdefault(find(column), []).append(column)
+    # Correlation ratio eta for one numeric and one categorical feature.
+    for numeric_column in numeric_cols:
+        values = numeric[numeric_column].to_numpy(dtype=float)
+        overall_mean = float(np.mean(values)) if len(values) else 0.0
+        total_ss = float(np.sum((values - overall_mean) ** 2))
+        if total_ss <= 0:
+            continue
+        for categorical_column in categorical_cols:
+            groups = X_train[categorical_column].astype("string").fillna("__MISSING__")
+            between_ss = 0.0
+            for _, index in groups.groupby(groups).groups.items():
+                group_values = values[X_train.index.get_indexer(index)]
+                if len(group_values):
+                    between_ss += len(group_values) * (float(np.mean(group_values)) - overall_mean) ** 2
+            eta = float(np.sqrt(max(0.0, between_ss / total_ss)))
+            if eta >= threshold:
+                union(numeric_column, categorical_column)
 
-    groups: list[list[str]] = []
-    consumed = set()
-    for group in grouped_numeric.values():
-        groups.append(group)
-        consumed.update(group)
-    groups.extend([[column] for column in X_train.columns if column not in consumed])
-    return groups
+    grouped: dict[str, list[str]] = {}
+    for column in columns:
+        grouped.setdefault(find(column), []).append(column)
+    return list(grouped.values())
 
 
 def permutation_importance_grouped(
