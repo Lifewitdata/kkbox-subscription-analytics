@@ -71,6 +71,45 @@ The canonical model implementation is scripts/train_churn_model.py. The old note
 
 Metric values should be quoted only after the current workflow has completed successfully. They describe this synthetic dataset and this particular chronological split, not real KKBox performance.
 
+### Latest verified synthetic-data build
+
+GitHub Actions completed the full build and test suite on the current feature branch. The committed files under models/ and results/ are generated from the current CSV inputs.
+
+**Chronological churn hold-out** — 3,337 training subscribers; 1,644 hold-out subscribers; hold-out signup dates begin 2016-09-01; classification threshold 0.50.
+
+| Metric | Verified hold-out result |
+|---|---:|
+| ROC-AUC | **0.9980** |
+| Accuracy | **99.15%** |
+| Precision | **93.02%** |
+| Recall | **96.00%** |
+| F1 | **94.49%** |
+| Log-loss | **0.1249** |
+
+Confusion matrix (rows = actual, columns = predicted):
+
+|  | Predicted retained | Predicted churn |
+|---|---:|---:|
+| Actual retained | 1,510 | 9 |
+| Actual churn | 5 | 120 |
+
+These are verified outputs for the committed synthetic dataset and this one signup-date hold-out. The unusually high scores may reflect relationships built into the synthetic label-generation process. They must not be presented as real KKBox, production or future-population performance.
+
+**Six-month LTV out-of-time hold-out** — training cohorts 2015-01 to 2016-03; later matured hold-out cohorts 2016-04 to 2016-10; 4,846 hold-out subscribers; source data cutoff 2017-03-31.
+
+| Metric | Verified result |
+|---|---:|
+| MAE | 383.57 source amount units |
+| RMSE | 477.37 source amount units |
+| WAPE | **36.68%** |
+| Mean forecast bias (forecast − actual) | −6.67 source amount units |
+
+The forecast is a historical channel-mean baseline for six-month observed revenue. This does not validate the notebook's 24-month exponential-decay scenario.
+
+**Executed SQL outputs:** cohort-retention query 25 rows; churn-by-segment query 27 rows; observed-revenue-by-channel query 5 rows. The six data-quality-check statements returned zero exception rows. Result CSVs and execution_summary.json are committed in results/sql/.
+
+**Retention experiment design check:** randomized placebo assignment over historical labels returned +0.084 percentage points, 95% CI −1.466 to +1.634 pp, p = 0.916. No retention offer was delivered; this is a null-effect design check, not an estimate of intervention uplift.
+
 ## SQL execution and tests
 
 SQL files live in sql/. Execute them with:
