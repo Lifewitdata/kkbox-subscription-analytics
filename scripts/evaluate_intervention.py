@@ -38,7 +38,7 @@ def evaluate(frame: pd.DataFrame) -> dict:
     se = float(np.sqrt(p_t * (1 - p_t) / len(treatment)
                        + p_c * (1 - p_c) / len(control)))
     z = difference / se if se else 0.0
-    return {
+    result = {
         "analysis": "intention_to_treat",
         "outcome": "30-day retained-and-paying indicator",
         "treatment_n": int(len(treatment)),
@@ -56,6 +56,53 @@ def evaluate(frame: pd.DataFrame) -> dict:
             "An observational treatment flag is not a substitute for randomized assignment.",
         ],
     }
+
+    # Optional experiment guardrails. These are still evaluated by original
+    # assignment (intention-to-treat), not by offer redemption or delivery.
+    if "unsubscribed_30d" in data.columns:
+        unsub_t = data.loc[data["assigned_treatment"] == 1, "unsubscribed_30d"].astype(float)
+        unsub_c = data.loc[data["assigned_treatment"] == 0, "unsubscribed_30d"].astype(float)
+        if set(pd.concat([unsub_t, unsub_c]).dropna().unique()).issubset({0.0, 1.0}):
+            pt, pc = float(unsub_t.mean()), float(unsub_c.mean())
+            se_u = float(np.sqrt(pt * (1 - pt) / len(unsub_t) + pc * (1 - pc) / len(unsub_c)))
+            diff = pt - pc
+            result["unsubscribe_guardrail"] = {
+                "treatment_rate": pt,
+                "control_rate": pc,
+                "difference_percentage_points": 100 * diff,
+                "ci_95_low_percentage_points": 100 * (diff - 1.96 * se_u),
+                "ci_95_high_percentage_points": 100 * (diff + 1.96 * se_u),
+                "interpretation": "intention-to-treat safety guardrail",
+            }
+
+    if "contribution_margin_30d" in data.columns:
+        mt = pd.to_numeric(
+            data.loc[data["assigned_treatment"] == 1, "contribution_margin_30d"], errors="coerce"
+        ).dropna()
+        mc = pd.to_numeric(
+            data.loc[data["assigned_treatment"] == 0, "contribution_margin_30d"], errors="coerce"
+        ).dropna()
+        if len(mt) > 1 and len(mc) > 1:
+            difference = float(mt.mean() - mc.mean())
+            se_m = float(np.sqrt(mt.var(ddof=1) / len(mt) + mc.var(ddof=1) / len(mc)))
+            result["contribution_margin_guardrail"] = {
+                "treatment_mean": float(mt.mean()),
+                "control_mean": float(mc.mean()),
+                "difference_treatment_minus_control": difference,
+                "ci_95_low": difference - 1.96 * se_m,
+                "ci_95_high": difference + 1.96 * se_m,
+                "interpretation": "intention-to-treat incremental contribution margin",
+            }
+
+    if "offer_sent" in data.columns:
+        result["offer_sent_rate_by_assignment"] = (
+            data.groupby("assigned_treatment")["offer_sent"].mean().to_dict()
+        )
+    if "offer_redeemed" in data.columns:
+        result["offer_redemption_rate_by_assignment"] = (
+            data.groupby("assigned_treatment")["offer_redeemed"].mean().to_dict()
+        )
+    return result
 
 
 def main() -> None:
