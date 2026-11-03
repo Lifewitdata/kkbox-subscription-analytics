@@ -160,6 +160,8 @@ def test_24_month_validation_records_small_sample_and_bootstrap_limits():
     assert result["training_and_holdout_subscribers"] == 1509
     assert result["target_horizon"] == "24 calendar months"
     assert result["subscriber_bootstrap_wape_95_low"] < result["subscriber_bootstrap_wape_95_high"]
+    assert np.isfinite(result["baseline_wape"])
+    assert np.isfinite(result["decay_model_wape_improvement_vs_baseline"])
     assert "does not include model" in result["bootstrap_note"]
 
 
