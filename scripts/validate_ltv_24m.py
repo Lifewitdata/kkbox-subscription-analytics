@@ -204,6 +204,8 @@ def score_fold(
             "monthly_decay_raw": float(p["monthly_decay_raw"]),
             "monthly_decay_used": float(p["monthly_decay_used"]),
             "steady_arpu_per_active_user": float(p["steady_arpu_per_active_user"]),
+            "active_rate_month_6": float(p["active_rate_month_6"]),
+            "historical_mean_ltv_6m": float(p["historical_mean_ltv_6m"]),
             "forecast_ltv_24m": forecast_mean,
             "actual_ltv_24m": actual_mean,
             "mae": float(group["absolute_error"].mean()),
@@ -291,32 +293,27 @@ def run_validation() -> dict:
         "synthetic-data uncertainty."
     )
 
-    # Decay sensitivity at the overall holdout scale. This is a scenario range,
-    # not a confidence interval.
+    # Fold/channel decay sensitivity: recompute the post-month-6 tail while
+    # holding each fold's observed six-month LTV and active-user ARPU fixed.
     sensitivity_rows = []
-    for channel, group in predictions_df.groupby("channel"):
-        channel_rows = fold_df[fold_df["channel"] == channel]
-        if channel_rows.empty:
-            continue
-        mean_decay = float(channel_rows["monthly_decay_used"].mean())
-        mean_arpu = float(channel_rows["steady_arpu_per_active_user"].mean())
-        base = float(channel_rows["forecast_ltv_24m"].mean())
-        base_survival = float(channel_rows["actual_ltv_24m"].mean() * 0 + 1)
+    for row in fold_df.itertuples(index=False):
         for multiplier in (0.90, 0.95, 1.00, 1.05, 1.10):
-            decay = float(np.clip(mean_decay * multiplier, 0.50, 0.999))
-            # Recompute the post-month-6 tail; the observed first-six-month
-            # component is estimated from each fold's stored forecast less tail.
-            tails = []
-            for row in channel_rows.itertuples(index=False):
-                # Use the fold's fitted decay/ARPU; the base forecast is the
-                # most recent reproducible scenario for this group.
-                survival = max(row.actual_ltv_24m * 0 + 0.0, 0.0)
-                tails.append((decay, mean_arpu))
+            decay = float(np.clip(row.monthly_decay_used * multiplier, 0.50, 0.999))
+            survival = float(row.active_rate_month_6)
+            forecast = float(row.historical_mean_ltv_6m)
+            for age in range(FIT_MONTHS, HORIZON_MONTHS):
+                if age > FIT_MONTHS:
+                    survival *= decay
+                forecast += survival * float(row.steady_arpu_per_active_user)
             sensitivity_rows.append({
-                "channel": channel,
+                "fold": int(row.fold),
+                "holdout_cohort": row.holdout_cohort,
+                "channel": row.channel,
                 "decay_multiplier": multiplier,
                 "scenario_monthly_decay": decay,
-                "base_forecast_ltv_24m": base,
+                "scenario_forecast_ltv_24m": forecast,
+                "actual_ltv_24m": float(row.actual_ltv_24m),
+                "absolute_error": abs(forecast - float(row.actual_ltv_24m)),
                 "interpretation": "decay assumption sensitivity; not a statistical confidence interval",
             })
     OUTPUT.mkdir(parents=True, exist_ok=True)
