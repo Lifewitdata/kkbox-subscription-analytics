@@ -1,6 +1,6 @@
 # KKBox Subscription Analytics
 
-An end-to-end subscription analytics portfolio project covering churn prediction, cohort retention, six-month revenue LTV, SQL reporting and a Streamlit dashboard. **Every committed data file is synthetic and KKBox-schema-shaped; this repository contains no actual KKBox customer or campaign records.**
+An end-to-end subscription analytics portfolio project covering churn prediction, six- and 24-month revenue LTV validation, SQL reporting, and a Streamlit dashboard. **Every committed data file is synthetic and KKBox-schema-shaped; this repository contains no actual KKBox customer or campaign records.**
 
 ## What is included
 
@@ -32,7 +32,7 @@ See data_dictionary.md for field-level definitions.
 
 ## Reproducible setup
 
-Python 3.11 is the pinned runtime.
+Python 3.12 is the CI and recommended Streamlit Community Cloud runtime.
 
 ~~~bash
 git clone https://github.com/Lifewitdata/kkbox-subscription-analytics.git
@@ -50,8 +50,11 @@ Run the complete reproducible build locally:
 python scripts/run_sql_analytics.py
 python scripts/train_churn_model.py
 python scripts/validate_ltv.py
+python scripts/validate_ltv_24m.py
+python scripts/analyze_feature_importance.py
 python scripts/run_intervention_design_check.py
 python scripts/build_dashboard_preview.py
+python scripts/smoke_streamlit_server.py
 pytest -q
 ~~~
 
@@ -67,9 +70,9 @@ The canonical model implementation is scripts/train_churn_model.py. The old note
 - The complete preprocessing-plus-classifier pipeline is saved as models/kkbox_churn_pipeline.joblib.
 - results/churn/evaluation_metrics.json stores the held-out ROC-AUC, accuracy, precision, recall, F1 and log-loss, along with split details and the confusion matrix.
 - results/churn/roc_curve.csv and roc_curve.png contain the ROC data and plot.
-- results/churn/feature_importance.csv contains native Random Forest impurity importance for the actual encoded model inputs. This is model attribution, not causal explanation; correlated features can share or distort importance.
+- results/churn/feature_importance.csv contains native Random Forest impurity importance. results/churn/grouped_permutation_importance.csv adds held-out grouped permutation importance. Strongly associated numeric, categorical and mixed predictors are grouped using training-only associations, then jointly permuted on the chronological hold-out. These are measures of model reliance, not causal effects.
 
-Metric values should be quoted only after the current workflow has completed successfully. They describe this synthetic dataset and this particular chronological split, not real KKBox performance.
+Metric values describe this synthetic dataset and this particular chronological split, not real KKBox performance.
 
 ### Latest verified synthetic-data build
 
@@ -104,7 +107,7 @@ These are verified outputs for the committed synthetic dataset and this one sign
 | WAPE | **36.68%** |
 | Mean forecast bias (forecast − actual) | −6.67 source amount units |
 
-The forecast is a historical channel-mean baseline for six-month observed revenue. This does not validate the notebook's 24-month exponential-decay scenario.
+The forecast is a historical channel-mean baseline for six-month observed revenue. The separate 24-month decay backtest is reported below.
 
 **Executed SQL outputs:** cohort-retention query 25 rows; churn-by-segment query 27 rows; observed-revenue-by-channel query 5 rows. The six data-quality-check statements returned zero exception rows. Result CSVs and execution_summary.json are committed in results/sql/.
 
@@ -125,7 +128,7 @@ The runner loads the root CSV files into a local SQLite database and persists:
 - results/sql/04_data_quality_checks.csv
 - results/sql/execution_summary.json
 
-The automated tests check data contracts, temporal separation, both-class coverage, model metrics/artifact, SQL execution outputs, chronological LTV validation and the intervention evaluator.
+The automated tests check data contracts, temporal separation, the committed model and metrics, executed SQL outputs, six- and 24-month chronological LTV outputs, correlated-feature grouping, experiment assignment and the Streamlit AppTest. CI additionally starts the real Streamlit server and checks its HTTP health endpoint.
 
 ## Six-month LTV: out-of-time validation
 
@@ -135,15 +138,29 @@ This is a transparent baseline validation of **six-month observed revenue LTV**.
 
 ## 24-month decay scenario: rolling out-of-time validation
 
-Run scripts/validate_ltv_24m.py. The script retains only fully matured monthly signup cohorts with a complete 24-calendar-month outcome window by the transaction data cutoff. It runs sequential one-month-ahead folds: fit on earlier matured cohorts, estimate a six-month retention-decay curve and active-user ARPU, then forecast the next matured cohort's 24-month transaction revenue per subscriber.
+Run scripts/validate_ltv_24m.py. Only fully matured signup cohorts with 24 calendar months of subsequent transaction history are eligible. The script runs sequential one-month-ahead folds: it fits the six-month retention decay and active-user ARPU on earlier matured cohorts and forecasts transaction revenue through month 24 for the next matured cohort. It also compares the decay model with a channel historical-mean 24-month revenue baseline fitted only on earlier matured cohorts.
 
-It writes:
-- results/ltv/out_of_time_24m_validation.json — overall MAE, RMSE, WAPE, bias, fold and sample-size details;
-- results/ltv/out_of_time_24m_by_fold_channel.csv — forecast versus actual by fold and acquisition channel;
-- results/ltv/out_of_time_24m_subscriber_predictions.csv — subscriber-level predictions and actual 24-month revenue;
-- results/ltv/out_of_time_24m_decay_sensitivity.csv — ±5%/±10% decay-rate scenario sensitivity.
+**Latest executed result on this synthetic dataset:**
 
-A subscriber bootstrap interval is also reported, but it captures subscriber-sampling variation only. It does not capture uncertainty from synthetic data generation, cohort shifts, attribution, revenue margin, model form or decay assumptions. This is a historical backtest on the small number of fully matured synthetic cohorts; do not call it a production forecast or contribution-margin LTV.
+| Metric | Decay scenario |
+|---|---:|
+| Rolling monthly hold-out folds | 2 |
+| Hold-out subscribers across folds | 1,509 |
+| 24-month WAPE | **57.63%** |
+| 24-month MAE | 1,307.78 source amount units |
+| 24-month RMSE | 1,633.05 source amount units |
+| Mean forecast bias | +1,099.89 source amount units |
+| Mean actual 24-month revenue | 2,269.28 source amount units |
+| Mean predicted 24-month revenue | 3,369.16 source amount units |
+| Subscriber-bootstrap 95% WAPE interval | 54.07%–61.42% |
+
+The decay scenario over-forecasts on average and its two-fold backtest is weak evidence because the available source cutoff (2017-03-31) leaves only three fully matured monthly signup cohorts (2015-01 through 2015-03). The subscriber bootstrap interval measures subscriber-sampling variation only; it does not include decay/model-form, cohort, attribution, margin, or synthetic-data uncertainty. The script also produces a decay-rate sensitivity table. This is a measured backtest, not a claim that the 24-month scenario is reliable or suitable for budgeting.
+
+Files:
+- results/ltv/out_of_time_24m_validation.json
+- results/ltv/out_of_time_24m_by_fold_channel.csv
+- results/ltv/out_of_time_24m_subscriber_predictions.csv
+- results/ltv/out_of_time_24m_decay_sensitivity.csv
 
 ## Retention experiment evaluation
 
@@ -160,7 +177,17 @@ Then run:
 python scripts/evaluate_intervention.py --input path/to/randomized_experiment.csv
 ~~~
 
-The evaluator reports intention-to-treat retention rates, absolute and relative uplift, a 95% confidence interval and a two-sided p-value. Analyze assignment, not offer redemption, to preserve the randomized comparison. This repository has no real experiment dataset; results/intervention/placebo_design_check.json is explicitly a null-effect design check over historical labels, not evidence that an offer reduces churn. Do not describe segment churn differences as uplift or causal effects.
+The evaluator reports intention-to-treat retention rates, absolute and relative uplift, a 95% confidence interval and a two-sided p-value; it also reports unsubscribe and contribution-margin guardrails when those columns are supplied. No actual randomized offer or post-offer outcome is present in this repository. results/intervention/placebo_design_check.json is only a null-effect code/design check over historical labels, not intervention evidence. The repository now includes a sample-size planner, stratified deterministic assignment generator, blank experiment template and EXPERIMENT_PROTOCOL.md. These prepare a prospective real test but do not deliver an offer or fabricate results.
+
+### Prepare a prospective retention test
+
+Read EXPERIMENT_PROTOCOL.md before contacting customers. Calculate a required sample size using a business-approved historical baseline and minimum detectable uplift:
+
+~~~bash
+python scripts/plan_retention_experiment.py --baseline-retention 0.80 --minimum-detectable-uplift 0.03 --alpha 0.05 --power 0.80 --nonresponse-rate 0.05
+~~~
+
+The example baseline and uplift are placeholders, not observed repository statistics. Create an authorised eligibility CSV with one row per subscriber and a pre-defined stratum, then set RETENTION_EXPERIMENT_SEED in the environment and run scripts/prepare_retention_experiment.py. The script assigns within strata; it does not send messages. Join the frozen assignment to delivery, redemption, billing retention and contribution-margin outcomes after the 30-day window, then run the intention-to-treat evaluator.
 
 ## Streamlit dashboard
 
@@ -180,19 +207,19 @@ This image is a reproducible static preview generated by scripts/build_dashboard
 
 ### Deploy to Streamlit Community Cloud
 
-Runtime setup is included in the repository: requirements.txt is intentionally limited to Streamlit, pandas and NumPy; requirements-dev.txt holds notebook, modelling and test packages. The repository pins the Streamlit runtime and contains .streamlit/config.toml. GitHub Actions also runs Streamlit's headless AppTest against app.py so app startup and rendering are exercised on every validation run.
+Runtime setup is included in the repository: root requirements.txt contains only the app runtime packages (Streamlit, pandas and NumPy), while requirements-dev.txt contains modelling, notebook and test packages. The app entry point is at the repository root, all four CSV inputs and generated results are committed, and .streamlit/config.toml sets headless server options. CI runs Streamlit AppTest and starts the actual HTTP server to verify its health endpoint.
 
-[**Open the Streamlit Community Cloud deployment flow**](https://share.streamlit.io/deploy?repository=Lifewitdata%2Fkkbox-subscription-analytics&branch=main&mainModule=app.py)
+[**Open Streamlit Community Cloud**](https://share.streamlit.io/)
 
-In the deployment form choose:
-- Repository: Lifewitdata/kkbox-subscription-analytics
-- Branch: main
-- Main file: app.py
-- Python: 3.12 (Community Cloud default)
+1. Sign in with the GitHub account that owns or has access to Lifewitdata/kkbox-subscription-analytics.
+2. Select **Create app** and choose **Yup, I have an app**.
+3. Set repository to Lifewitdata/kkbox-subscription-analytics, branch to main, and main file path to app.py.
+4. In Advanced settings select Python 3.12, then deploy.
+5. Once the service finishes deploying, copy the assigned streamlit.app URL into this README under the live URL heading.
 
-Sign in to Streamlit Community Cloud with the GitHub account that can access the repository, then click Deploy. Streamlit assigns the final streamlit.app URL after deployment. The URL cannot be truthfully published before that account-level action completes. [Streamlit's deployment instructions](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/deploy) explain repository, branch and entrypoint selection.
+[Official deployment instructions](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/deploy) explain the repository, branch, entrypoint and Python selection.
 
-**Hosting status:** the code and deployment configuration are committed and the app has an automated headless smoke test; a live hosted URL still requires the account-level deploy action. Do not mistake the static screenshot above for a hosted deployment.
+**Hosting status:** this repo is prepared and CI-tested, but a public app URL has not yet been issued. Deployment requires the repository owner's Streamlit Community Cloud sign-in and deploy action. I cannot create that account-level deployment or claim a URL before Streamlit issues it. The static screenshot remains only a preview.
 
 ## Model card, stakeholder use and limits
 
@@ -208,6 +235,10 @@ Do not use the synthetic model for real customer targeting, choose a real acquis
 kkbox-subscription-analytics/
 ├── .github/workflows/ci.yml
 ├── app.py
+├── requirements.txt                 # lightweight Streamlit runtime
+├── requirements-dev.txt             # modelling, notebook and test tools
+├── EXPERIMENT_PROTOCOL.md
+├── experiment_template.csv
 ├── data_dictionary.md
 ├── kkbox_churn_modeling.ipynb
 ├── kkbox_ltv_cac_analysis.ipynb
@@ -219,6 +250,10 @@ kkbox-subscription-analytics/
 ├── scripts/
 │   ├── build_dashboard_preview.py
 │   ├── evaluate_intervention.py
+│   ├── analyze_feature_importance.py
+│   ├── plan_retention_experiment.py
+│   ├── prepare_retention_experiment.py
+│   ├── smoke_streamlit_server.py
 │   ├── generate_user_logs.py
 │   ├── load_sqlite.py
 │   ├── run_intervention_design_check.py
@@ -235,8 +270,9 @@ kkbox-subscription-analytics/
 ├── models/                         # generated fitted pipeline
 ├── results/
 │   ├── churn/                      # metrics, ROC, confusion matrix, importance
+│   │   └── grouped_permutation_importance.*
 │   ├── intervention/               # placebo design check
-│   ├── ltv/                        # chronological hold-out results
+│   ├── ltv/                        # 6m and 24m chronological hold-out results
 │   └── sql/                        # executed query result tables
 └── dashboard_screenshots/
     └── overview.png
