@@ -99,8 +99,9 @@ importance_path = ROOT / "results" / "churn" / "grouped_permutation_importance.c
 if importance_path.exists():
     st.subheader("Correlation-aware permutation importance")
     st.caption(
-        "Features are shuffled on the chronological hold-out. Highly correlated numeric "
-        "features are permuted together. This measures model reliance, not a causal effect."
+        "Features with strong numeric, categorical or mixed associations are grouped "
+        "using training data and jointly shuffled on the chronological hold-out. "
+        "This measures model reliance, not a causal effect."
     )
     importance = pd.read_csv(importance_path).head(15)
     st.bar_chart(importance.set_index("feature_group")["mean_roc_auc_drop"])
@@ -114,16 +115,23 @@ ltv24_path = ROOT / "results" / "ltv" / "out_of_time_24m_validation.json"
 if ltv24_path.exists():
     ltv24 = json.loads(ltv24_path.read_text(encoding="utf-8"))
     st.subheader("24-month LTV rolling out-of-time validation")
-    l1, l2, l3 = st.columns(3)
-    l1.metric("24-month WAPE", f"{ltv24['wape']:.1%}")
-    l2.metric("MAE", f"{ltv24['mae']:,.0f}")
-    l3.metric("Rolling folds", str(ltv24["fold_count"]))
+    l1, l2, l3, l4 = st.columns(4)
+    l1.metric("Decay-model WAPE", f"{ltv24['wape']:.1%}")
+    l2.metric("Historical-mean baseline WAPE", f"{ltv24['baseline_wape']:.1%}")
+    l3.metric("MAE", f"{ltv24['mae']:,.0f}")
+    l4.metric("Rolling folds", str(ltv24["fold_count"]))
+    st.write(
+        f"Decay model WAPE improvement vs baseline: "
+        f"{ltv24['decay_model_wape_improvement_vs_baseline']:.1%} "
+        "(negative means the decay model is worse)."
+    )
     st.write(
         f"Matured cohorts: {ltv24['matured_signup_months'][0]}–"
         f"{ltv24['matured_signup_months'][-1]}; "
         f"{ltv24['training_and_holdout_subscribers']:,} validation subscribers."
     )
     st.caption(
-        "Synthetic data only. A 24-month historical scenario backtest, not a production "
-        "forecast, contribution-margin LTV, or validation on actual KKBox customers."
+        "Synthetic data only. The backtest has few fully matured monthly cohorts; its "
+        "subscriber bootstrap captures user-sampling variation only. This is not a "
+        "production forecast, contribution-margin LTV, or validation on actual KKBox customers."
     )
