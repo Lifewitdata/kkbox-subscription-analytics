@@ -1,0 +1,23 @@
+{
+  "dataset": "synthetic KKBox-schema demonstration data",
+  "validation_design": "rolling out-of-time monthly cohort backtest",
+  "target_horizon": "24 calendar months",
+  "cutoff_date": "2017-03-31",
+  "matured_signup_months": [
+    "2015-01",
+    "2015-02",
+    "2015-03"
+  ],
+  "fold_count": 2,
+  "training_and_holdout_subscribers": 1509,
+  "mae": 1307.7807506942452,
+  "rmse": 1633.0510939514024,
+  "wape": 0.5762985875803194,
+  "mean_forecast_bias": 1099.8864099754414,
+  "mean_actual_ltv_24m": 2269.2763419483103,
+  "mean_predicted_ltv_24m": 3369.162751923752,
+  "scope": "24-month transaction revenue scenario validation on matured synthetic cohorts; not contribution-margin LTV, real KKBox performance or production forecasting",
+  "subscriber_bootstrap_wape_95_low": 0.5407102983595465,
+  "subscriber_bootstrap_wape_95_high": 0.6141571351042214,
+  "bootstrap_note": "Subscriber-sampling interval only; it does not include model, decay, cohort or synthetic-data uncertainty."
+}
