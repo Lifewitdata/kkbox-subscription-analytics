@@ -11,3 +11,7 @@ artifacts/
 .streamlit/secrets.toml
 .DS_Store
 Thumbs.db
+
+# Local SQLite databases and transient caches
+*.sqlite
+*.db
