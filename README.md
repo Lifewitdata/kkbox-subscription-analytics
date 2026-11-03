@@ -29,7 +29,7 @@ The churn notebook joins member, transaction, listening-activity and training-la
 
 ### Saved notebook evaluation snapshot
 
-The following values are taken from the notebook's saved evaluation output. Cross-validation uses scikit-learn's \`neg_log_loss\` scoring, so values are negative and a score closer to zero is better.
+The following values are taken from the notebook's saved evaluation output. Cross-validation uses scikit-learn's `neg_log_loss` scoring, so values are negative and a score closer to zero is better.
 
 | Classifier | 10-fold CV negative log-loss |
 |---|---:|
@@ -52,7 +52,7 @@ These are saved synthetic-data notebook outputs. Re-run the notebook to regenera
 
 **Notebook:** [kkbox_churn_modeling.ipynb](./kkbox_churn_modeling.ipynb)
 
-**Input limitation:** The notebook also expects \`user_logs_v2.csv\`, but that file is not currently committed in this repository. The other churn inputs (\`train_v2.csv\`, \`sample_submission_v2.csv\`, \`transactions_v2.csv\` and \`members_v3.csv\`) are in the repository root. Add the matching synthetic or authorised source file \`user_logs_v2.csv\` to the root directory before running the churn notebook from start to finish.
+**Input limitation:** The notebook also expects `user_logs_v2.csv`, but that file is not currently committed in this repository. The other churn inputs (`train_v2.csv`, `sample_submission_v2.csv`, `transactions_v2.csv` and `members_v3.csv`) are in the repository root. Add the matching synthetic or authorised source file `user_logs_v2.csv` to the root directory before running the churn notebook from start to finish.
 
 ## Project 2 — Cohort LTV & Break-Even CAC
 
@@ -62,11 +62,11 @@ The model uses an exponential-decay assumption to extrapolate retention beyond t
 
 **Notebook:** [kkbox_ltv_cac_analysis.ipynb](./kkbox_ltv_cac_analysis.ipynb)
 
-**Inputs:** \`members_v3.csv\`, \`transactions_v2.csv\` and \`train_v2.csv\`. These files are committed in the repository root, and the notebook has been updated to read those exact filenames.
+**Inputs:** `members_v3.csv`, `transactions_v2.csv` and `train_v2.csv`. These files are committed in the repository root, and the notebook has been updated to read those exact filenames.
 
 ## Repository structure
 
-\`\`\`
+```
 kkbox-subscription-analytics/
 ├── README.md
 ├── kkbox_churn_modeling.ipynb
@@ -75,23 +75,23 @@ kkbox-subscription-analytics/
 ├── sample_submission_v2.csv
 ├── train_v2.csv
 └── transactions_v2.csv
-\`\`\`
+```
 
-There are no separate data-generator scripts, no SQL files or SQL implementation, and no \`input/\` subdirectory in the current repository.
+There are no separate data-generator scripts, no SQL files or SQL implementation, and no `input/` subdirectory in the current repository.
 
 ## Getting started
 
 Clone the repository and install the Python dependencies:
 
-\`\`\`bash
+```bash
 git clone https://github.com/Lifewitdata/kkbox-subscription-analytics.git
 cd kkbox-subscription-analytics
 
 pip install pandas numpy matplotlib seaborn scikit-learn xgboost jupyter
 jupyter notebook
-\`\`\`
+```
 
-Open \`kkbox_ltv_cac_analysis.ipynb\` to run the LTV analysis with the CSV files included in the repository. To run \`kkbox_churn_modeling.ipynb\` fully, first add the missing \`user_logs_v2.csv\` input described above.
+Open `kkbox_ltv_cac_analysis.ipynb` to run the LTV analysis with the CSV files included in the repository. To run `kkbox_churn_modeling.ipynb` fully, first add the missing `user_logs_v2.csv` input described above.
 
 ## Tech stack
 
