@@ -171,3 +171,20 @@ def test_sample_size_planner_returns_balanced_two_arm_design():
     result = calculate_sample_size(0.80, 0.03, alpha=0.05, power=0.80, nonresponse_rate=0.05)
     assert result["required_total_assignments"] == 2 * result["required_assignments_per_arm"]
     assert result["required_assignments_per_arm"] >= result["required_evaluable_per_arm"]
+
+
+def test_intervention_evaluator_reports_unsubscribe_and_margin_guardrails():
+    frame = pd.DataFrame({
+        "assigned_treatment": [0] * 50 + [1] * 50,
+        "retained_30d": [1] * 40 + [0] * 10 + [1] * 43 + [0] * 7,
+        "unsubscribed_30d": [0] * 48 + [1] * 2 + [0] * 47 + [1] * 3,
+        "contribution_margin_30d": [10.0] * 50 + [12.0] * 50,
+        "offer_sent": [0] * 50 + [1] * 50,
+        "offer_redeemed": [0] * 50 + [1] * 20 + [0] * 30,
+    })
+    result = evaluate(frame)
+    assert "unsubscribe_guardrail" in result
+    assert "contribution_margin_guardrail" in result
+    assert "offer_sent_rate_by_assignment" in result
+    assert "offer_redemption_rate_by_assignment" in result
+    assert result["contribution_margin_guardrail"]["difference_treatment_minus_control"] == 2.0
