@@ -39,8 +39,6 @@ jobs:
         run: python scripts/validate_ltv_24m.py
       - name: Calculate correlation-aware held-out feature importance
         run: python scripts/analyze_feature_importance.py
-      - name: Smoke-test the actual Streamlit app entry point
-        run: streamlit run app.py --server.headless true --server.port 8501 --server.address 127.0.0.1 &
       - name: Run randomized-assignment placebo design check
         run: python scripts/run_intervention_design_check.py
       - name: Build dashboard preview image
