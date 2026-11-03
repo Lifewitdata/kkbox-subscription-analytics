@@ -1,0 +1,39 @@
+{
+  "dataset": "synthetic KKBox-schema demonstration data",
+  "evaluation_design": "chronological hold-out by registration date",
+  "test_start_registration_date": "2016-09-01",
+  "threshold": 0.5,
+  "train_rows": 3337,
+  "test_rows": 1644,
+  "train_churn_rate": 0.08960143841774049,
+  "test_churn_rate": 0.07603406326034064,
+  "cv_best_roc_auc": 0.9987351787688175,
+  "roc_auc": 0.9980276497695852,
+  "accuracy": 0.9914841849148418,
+  "precision": 0.9302325581395349,
+  "recall": 0.96,
+  "f1": 0.9448818897637795,
+  "log_loss": 0.12491293695786224,
+  "confusion_matrix_labels": [
+    "retained_0",
+    "churn_1"
+  ],
+  "confusion_matrix": [
+    [
+      1510,
+      9
+    ],
+    [
+      5,
+      120
+    ]
+  ],
+  "best_params": {
+    "classifier__min_samples_leaf": 1,
+    "classifier__max_features": "sqrt",
+    "classifier__max_depth": null
+  },
+  "feature_count_before_encoding": 24,
+  "feature_count_after_encoding": 62,
+  "random_state": 42
+}

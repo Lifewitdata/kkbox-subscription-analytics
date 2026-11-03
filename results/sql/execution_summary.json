@@ -1,0 +1,22 @@
+{
+  "01_cohort_retention.sql": {
+    "statement_count": 1,
+    "result_rows": 25,
+    "output_file": "01_cohort_retention.csv"
+  },
+  "02_churn_by_segment.sql": {
+    "statement_count": 1,
+    "result_rows": 27,
+    "output_file": "02_churn_by_segment.csv"
+  },
+  "03_ltv_by_channel.sql": {
+    "statement_count": 1,
+    "result_rows": 5,
+    "output_file": "03_ltv_by_channel.csv"
+  },
+  "04_data_quality_checks.sql": {
+    "statement_count": 6,
+    "result_rows": 0,
+    "output_file": "04_data_quality_checks.csv"
+  }
+}
