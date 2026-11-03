@@ -83,7 +83,7 @@ The database file is local and ignored by Git. Run tests locally with `pytest -q
 
 ## LTV interpretation and stakeholder use
 
-LTV and break-even CAC are scenario estimates based on synthetic revenue and an assumed retention-decay curve. Do not recommend real acquisition spend or claim a winning channel from this synthetic dataset. The notebook's decay assumption, sample eligibility and data cut-off materially affect projected LTV; validate on a hold-out cohort and sensitivity analysis before using the output for budget decisions.
+LTV and break-even CAC are scenario estimates based on synthetic revenue and an assumed retention-decay curve. The notebook includes a random user-level hold-out check on observed six-month revenue, a ±5%/±10% decay sensitivity table, and subscriber-bootstrap intervals for observed six- and twelve-month revenue LTV and derived CAC ceilings. These intervals capture user-sampling variation only, not decay-parameter, attribution, margin or synthetic-data uncertainty. The hold-out is not an out-of-time forecast validation. Do not recommend real acquisition spend or claim a winning channel from this synthetic dataset.
 
 ## Repository structure
 
