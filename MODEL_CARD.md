@@ -31,13 +31,22 @@ GitHub Actions executes the current committed CSVs and, after tests pass, persis
 - models/kkbox_churn_pipeline.joblib — complete preprocessing and fitted classifier;
 - results/churn/evaluation_metrics.json — ROC-AUC, accuracy, precision, recall, F1, log-loss, confusion matrix, sample sizes and split boundary;
 - results/churn/roc_curve.csv and roc_curve.png;
-- results/churn/feature_importance.csv — native Random Forest importance by transformed model input.
+- results/churn/feature_importance.csv — native Random Forest impurity importance by transformed model input;
+- results/churn/grouped_permutation_importance.csv and grouped_permutation_importance.json — grouped permutation importance on the chronological hold-out.
 
 The metrics are for the synthetic dataset and a single chronological hold-out. They do not estimate performance on real KKBox users or on a future production population.
 
-## Feature importance
+## Feature importance and correlated predictors
 
-The report uses native Random Forest impurity importance on the encoded model inputs. It is direct model feature importance rather than PCA back-projection. It is not causal, can be biased toward high-cardinality features, and can distribute importance unpredictably among correlated predictors. Use permutation importance on a strictly held-out sample and SHAP (with a documented background sample) for complementary model explanation before drawing stronger conclusions.
+Native Random Forest impurity importance is retained as a model diagnostic, but it is not a causal explanation and can favour variables with many possible split points.
+
+The companion analysis in scripts/analyze_feature_importance.py:
+- computes feature associations on training data only;
+- uses Spearman correlation for numeric/numeric pairs, bias-corrected Cramer's V for categorical/categorical pairs, and correlation ratio for numeric/categorical pairs;
+- groups strongly associated columns before jointly permuting the group on the held-out sample;
+- reports the fall in ROC-AUC over 30 row permutations.
+
+This estimates predictive model reliance under a grouped permutation scheme. It is not a causal effect, an intervention response, or a claim that changing a feature will change churn. Grouped shuffling preserves associations within each feature group but breaks its link to the target; it can conceal which member of a group carries predictive signal. The reported 2.5th–97.5th percentiles are permutation-repeat variability, not population confidence intervals.
 
 ## Limitations and risks
 
