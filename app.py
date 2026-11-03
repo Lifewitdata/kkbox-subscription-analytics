@@ -93,3 +93,37 @@ if ltv_path.exists():
     )
     st.metric("Hold-out WAPE", f"{ltv['wape']:.1%}" if ltv["wape"] is not None else "N/A")
     st.caption("Historical channel-mean baseline; synthetic-data six-month validation only.")
+
+
+importance_path = ROOT / "results" / "churn" / "grouped_permutation_importance.csv"
+if importance_path.exists():
+    st.subheader("Correlation-aware permutation importance")
+    st.caption(
+        "Features are shuffled on the chronological hold-out. Highly correlated numeric "
+        "features are permuted together. This measures model reliance, not a causal effect."
+    )
+    importance = pd.read_csv(importance_path).head(15)
+    st.bar_chart(importance.set_index("feature_group")["mean_roc_auc_drop"])
+    st.dataframe(
+        importance[["feature_group", "feature_count", "mean_roc_auc_drop",
+                    "permutation_p2_5", "permutation_p97_5"]],
+        use_container_width=True,
+    )
+
+ltv24_path = ROOT / "results" / "ltv" / "out_of_time_24m_validation.json"
+if ltv24_path.exists():
+    ltv24 = json.loads(ltv24_path.read_text(encoding="utf-8"))
+    st.subheader("24-month LTV rolling out-of-time validation")
+    l1, l2, l3 = st.columns(3)
+    l1.metric("24-month WAPE", f"{ltv24['wape']:.1%}")
+    l2.metric("MAE", f"{ltv24['mae']:,.0f}")
+    l3.metric("Rolling folds", str(ltv24["fold_count"]))
+    st.write(
+        f"Matured cohorts: {ltv24['matured_signup_months'][0]}–"
+        f"{ltv24['matured_signup_months'][-1]}; "
+        f"{ltv24['training_and_holdout_subscribers']:,} validation subscribers."
+    )
+    st.caption(
+        "Synthetic data only. A 24-month historical scenario backtest, not a production "
+        "forecast, contribution-margin LTV, or validation on actual KKBox customers."
+    )
