@@ -94,3 +94,97 @@ def test_ltv_validation_is_out_of_time_not_random():
     assert result["holdout_signup_months"]
     assert result["train_signup_months"][-1] < result["holdout_signup_months"][0]
     assert result["holdout_users"] > 0
+
+
+def test_24_month_ltv_rolling_backtest_outputs_exist_and_are_chronological():
+    path = ROOT / "results" / "ltv" / "out_of_time_24m_validation.json"
+    assert path.is_file()
+    result = json.loads(path.read_text())
+    assert result["target_horizon"] == "24 calendar months"
+    assert result["fold_count"] >= 2
+    assert result["training_and_holdout_subscribers"] > 0
+    assert result["matured_signup_months"] == sorted(result["matured_signup_months"])
+    assert np.isfinite(result["wape"])
+    fold_results = pd.read_csv(ROOT / "results" / "ltv" / "out_of_time_24m_by_fold_channel.csv")
+    for row in fold_results.itertuples(index=False):
+        last_train_month = row.training_cohorts.split(",")[-1]
+        assert last_train_month < row.holdout_cohort
+
+
+def test_grouped_permutation_importance_outputs_exist():
+    path = ROOT / "results" / "churn" / "grouped_permutation_importance.csv"
+    assert path.is_file()
+    importance = pd.read_csv(path)
+    assert not importance.empty
+    assert importance["feature_count"].ge(1).all()
+    assert importance["permutation_repeats"].eq(30).all()
+    assert importance["interpretation"].str.contains("not a causal effect").all()
+
+
+def test_retention_assignment_is_reproducible_and_balanced():
+    from prepare_retention_experiment import assign
+
+    eligible = pd.DataFrame({
+        "msno": [f"subscriber_{i:03d}" for i in range(101)],
+        "stratum": ["high"] * 51 + ["standard"] * 50,
+    })
+    first = assign(eligible, "test-secret")
+    second = assign(eligible, "test-secret")
+    pd.testing.assert_frame_equal(first, second)
+    counts = first.groupby(["stratum", "assigned_treatment"]).size().unstack(fill_value=0)
+    assert (counts.max(axis=1) - counts.min(axis=1)).max() <= 1
+
+
+def test_grouped_importance_groups_correlated_columns():
+    from analyze_feature_importance import correlated_groups
+
+    frame = pd.DataFrame({
+        "numeric_a": np.arange(100, dtype=float),
+        "numeric_b": np.arange(100, dtype=float) * 2 + 1,
+        "channel": ["A", "B"] * 50,
+        "channel_copy": ["A", "B"] * 50,
+        "independent": np.random.default_rng(4).normal(size=100),
+    })
+    groups = correlated_groups(frame, threshold=0.85)
+    flattened = [column for group in groups for column in group]
+    assert sorted(flattened) == sorted(frame.columns.tolist())
+    assert any({"numeric_a", "numeric_b"}.issubset(set(group)) for group in groups)
+    assert any({"channel", "channel_copy"}.issubset(set(group)) for group in groups)
+
+
+def test_24_month_validation_records_small_sample_and_bootstrap_limits():
+    result = json.loads(
+        (ROOT / "results" / "ltv" / "out_of_time_24m_validation.json").read_text()
+    )
+    assert result["fold_count"] == 2
+    assert result["training_and_holdout_subscribers"] == 1509
+    assert result["target_horizon"] == "24 calendar months"
+    assert result["subscriber_bootstrap_wape_95_low"] < result["subscriber_bootstrap_wape_95_high"]
+    assert np.isfinite(result["baseline_wape"])
+    assert np.isfinite(result["decay_model_wape_improvement_vs_baseline"])
+    assert "does not include model" in result["bootstrap_note"]
+
+
+def test_sample_size_planner_returns_balanced_two_arm_design():
+    from plan_retention_experiment import calculate_sample_size
+
+    result = calculate_sample_size(0.80, 0.03, alpha=0.05, power=0.80, nonresponse_rate=0.05)
+    assert result["required_total_assignments"] == 2 * result["required_assignments_per_arm"]
+    assert result["required_assignments_per_arm"] >= result["required_evaluable_per_arm"]
+
+
+def test_intervention_evaluator_reports_unsubscribe_and_margin_guardrails():
+    frame = pd.DataFrame({
+        "assigned_treatment": [0] * 50 + [1] * 50,
+        "retained_30d": [1] * 40 + [0] * 10 + [1] * 43 + [0] * 7,
+        "unsubscribed_30d": [0] * 48 + [1] * 2 + [0] * 47 + [1] * 3,
+        "contribution_margin_30d": [10.0] * 50 + [12.0] * 50,
+        "offer_sent": [0] * 50 + [1] * 50,
+        "offer_redeemed": [0] * 50 + [1] * 20 + [0] * 30,
+    })
+    result = evaluate(frame)
+    assert "unsubscribe_guardrail" in result
+    assert "contribution_margin_guardrail" in result
+    assert "offer_sent_rate_by_assignment" in result
+    assert "offer_redemption_rate_by_assignment" in result
+    assert result["contribution_margin_guardrail"]["difference_treatment_minus_control"] == 2.0

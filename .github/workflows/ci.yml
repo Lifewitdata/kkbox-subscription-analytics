@@ -23,23 +23,29 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
           cache: pip
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
       - name: Execute SQL and persist result tables
         run: python scripts/run_sql_analytics.py
       - name: Train leakage-safe model and calculate held-out metrics
         run: python scripts/train_churn_model.py
       - name: Validate six-month LTV on later signup cohorts
         run: python scripts/validate_ltv.py
+      - name: Backtest 24-month decay LTV on rolling matured cohorts
+        run: python scripts/validate_ltv_24m.py
+      - name: Calculate correlation-aware held-out feature importance
+        run: python scripts/analyze_feature_importance.py
       - name: Run randomized-assignment placebo design check
         run: python scripts/run_intervention_design_check.py
       - name: Build dashboard preview image
         run: python scripts/build_dashboard_preview.py
-      - name: Run automated tests
+      - name: Start Streamlit server and verify HTTP health
+        run: python scripts/smoke_streamlit_server.py
+      - name: Execute Streamlit AppTest and project test suite
         run: pytest -q
       - name: Upload reproducible model and analysis outputs
         uses: actions/upload-artifact@v4
@@ -52,16 +58,16 @@ jobs:
           if-no-files-found: error
           retention-days: 30
       - name: Commit verified generated outputs to this feature branch
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/fix/leakage-safe-analytics' }}
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/fix/streamlit-cloud-ltv24-experiment' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin "$GITHUB_REF_NAME"
-          git pull --rebase origin "$GITHUB_REF_NAME"
           git add models/ results/ dashboard_screenshots/
           if git diff --cached --quiet; then
             echo "Generated outputs are already current."
           else
             git commit -m "chore: commit verified synthetic outputs [generated outputs]"
-            git push
+            git fetch origin "$GITHUB_REF_NAME"
+            git rebase "origin/$GITHUB_REF_NAME"
+            git push origin "HEAD:$GITHUB_REF_NAME"
           fi

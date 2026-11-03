@@ -1,0 +1,79 @@
+{
+  "evaluation_design": "same chronological held-out sample as churn evaluation",
+  "holdout_start_registration_date": "2016-09-01",
+  "holdout_rows": 1644,
+  "baseline_roc_auc": 0.9980276497695852,
+  "correlation_method": "Spearman absolute correlation computed on training data only",
+  "correlation_threshold": 0.85,
+  "groups": [
+    [
+      "city"
+    ],
+    [
+      "registered_via"
+    ],
+    [
+      "transaction_count"
+    ],
+    [
+      "transaction_total_paid",
+      "registration_recency_days"
+    ],
+    [
+      "transaction_mean_paid"
+    ],
+    [
+      "transaction_max_paid"
+    ],
+    [
+      "last_payment_method_id"
+    ],
+    [
+      "last_payment_plan_days",
+      "last_plan_list_price"
+    ],
+    [
+      "last_is_auto_renew"
+    ],
+    [
+      "last_is_cancel"
+    ],
+    [
+      "log_days"
+    ],
+    [
+      "total_secs",
+      "mean_secs_per_log",
+      "total_num_100",
+      "total_unique_tracks"
+    ],
+    [
+      "max_secs_per_log"
+    ],
+    [
+      "total_num_25"
+    ],
+    [
+      "total_num_50"
+    ],
+    [
+      "total_num_75"
+    ],
+    [
+      "total_num_985"
+    ],
+    [
+      "days_since_last_transaction"
+    ],
+    [
+      "days_since_last_log"
+    ]
+  ],
+  "permutation_repeats": 30,
+  "limitations": [
+    "Permutation importance measures predictive reliance, not causal effect.",
+    "Jointly permuted correlated groups reduce redundant-signal masking but can hide within-group allocation.",
+    "The repeat quantiles describe permutation variability, not a population confidence interval.",
+    "All results apply only to this synthetic dataset and one chronological hold-out."
+  ]
+}
