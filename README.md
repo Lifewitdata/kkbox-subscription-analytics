@@ -1,99 +1,108 @@
-<div align="center">
+# KKBox Subscription Analytics
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:2563eb,100:9333ea&height=190&section=header&text=KKBox%20Subscription%20Analytics&fontSize=40&fontColor=ffffff&animation=fadeIn&fontAlignY=35&desc=Churn%20Prediction%20%7C%20Subscription%20LTV%20%26%20CAC&descAlignY=55&descSize=17" width="100%"/>
+Churn prediction, cohort retention, customer segmentation and subscription LTV/CAC analysis using **synthetic KKBox-schema demonstration data**. No actual KKBox customer or campaign records are included.
 
-[![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![pandas](https://img.shields.io/badge/pandas-2.x-150458?style=for-the-badge&logo=pandas&logoColor=white)](https://pandas.pydata.org/)
-[![scikit-learn](https://img.shields.io/badge/scikit--learn-ML-F7931E?style=for-the-badge&logo=scikitlearn&logoColor=white)](https://scikit-learn.org/)
-[![XGBoost](https://img.shields.io/badge/XGBoost-Boosting-EA4C89?style=for-the-badge)](https://xgboost.readthedocs.io/)
-[![Jupyter](https://img.shields.io/badge/Jupyter-Notebooks-F37626?style=for-the-badge&logo=jupyter&logoColor=white)](https://jupyter.org/)
+## Projects
 
-</div>
+1. **Churn prediction** — feature engineering from member, transaction and listening activity; classifier comparison and XGBoost tuning; held-out classification metrics; exploratory feature attribution; segment churn diagnostics.
+2. **Cohort LTV and CAC** — retention by acquisition channel and signup month, observed revenue per subscriber, and decay-based LTV/CAC scenarios.
+3. **SQL analytics** — cohort retention, churn by plan/auto-renew/city, observed revenue by channel, and data-quality checks.
+4. **Streamlit dashboard** — headline churn, churn by registration channel, observed revenue per subscriber, and listening activity.
 
----
+## Data files and naming contract
 
-## About
+All notebooks, scripts, SQL documentation and dashboard use these canonical input names:
 
-This repository contains two subscription-analytics projects built around the data structure of the **KKBox Churn Prediction Challenge (WSDM Cup 2018)**.
+| File | Grain | Purpose |
+|---|---|---|
+| `members_v3.csv` | Subscriber | City, demographic fields, registration channel and signup date |
+| `transactions_v2.csv` | Transaction | Plan, payments, auto-renew, expiry and cancellation |
+| `user_logs_v2.csv` | Subscriber-day | Listening activity and seconds streamed |
+| `train_v2.csv` | Labelled subscriber | `is_churn` target (1=churn, 0=retained) |
+| `sample_submission_v2.csv` | Prediction subscriber | Submission-style ID list used by the original notebook |
 
-| Project | Business question |
-|---|---|
-| **Churn Prediction** | Which subscribers are more likely to churn? |
-| **Cohort LTV & Break-Even CAC** | How does subscriber value vary by acquisition channel, and what acquisition cost could that value support? |
+All CSVs are stored in the repository root. `user_logs_v2.csv` is synthetic and can be regenerated deterministically from `members_v3.csv`:
 
-**Data notice:** The committed CSVs are synthetic project data, not actual KKBox customer records or marketing-spend data. Results should be treated as demonstrations of analytical methods, not as measured KKBox business performance.
+```bash
+python scripts/generate_user_logs.py
+```
 
-## Project 1 — Churn Prediction
+See [data_dictionary.md](data_dictionary.md) for columns, grain and metric definitions.
 
-The churn notebook joins member, transaction, listening-activity and training-label data, creates user-level features, applies feature selection and PCA, compares classifiers using 10-fold cross-validation with negative log-loss, and tunes an XGBoost model.
+## Quick start
 
-### Saved notebook evaluation snapshot
+Python 3.11 is the pinned environment.
 
-The following values are taken from the notebook's saved evaluation output. Cross-validation uses scikit-learn's `neg_log_loss` scoring, so values are negative and a score closer to zero is better.
+```bash
+git clone https://github.com/Lifewitdata/kkbox-subscription-analytics.git
+cd kkbox-subscription-analytics
+python -m venv .venv
+# Windows: .venv\\Scripts\\activate
+# macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+jupyter notebook
+```
 
-| Classifier | 10-fold CV negative log-loss |
-|---|---:|
-| K-Nearest Neighbours | -1.1965 |
-| Logistic Regression | -0.1637 |
-| Linear Discriminant Analysis | -0.2061 |
-| Quadratic Discriminant Analysis | -0.2453 |
-| Decision Tree | -3.2362 |
-| Gaussian Naive Bayes | -0.2918 |
-| Bagging | -0.1642 |
-| AdaBoost | -0.4236 |
-| Gradient Boosting | -0.1598 |
-| Random Forest | -0.1774 |
-| Extra Trees | -0.1594 |
-| XGBoost | -0.1416 |
+Open `kkbox_churn_modeling.ipynb` or `kkbox_ltv_cac_analysis.ipynb`.
 
-The saved tuning output reports a best 10-fold CV negative log-loss of **-0.1398**. The held-out test output reports a positive log-loss of **0.1223**. The saved train/test split contains **3,486 training rows** and **1,495 test rows**; the training split churn rate is **8.4%**.
+Run the dashboard:
 
-These are saved synthetic-data notebook outputs. Re-run the notebook to regenerate the results. The notebook reports log-loss; it does **not** calculate ROC-AUC.
+```bash
+streamlit run app.py
+```
 
-**Notebook:** [kkbox_churn_modeling.ipynb](./kkbox_churn_modeling.ipynb)
+## Churn model evaluation
 
-**Input limitation:** The notebook also expects `user_logs_v2.csv`, but that file is not currently committed in this repository. The other churn inputs (`train_v2.csv`, `sample_submission_v2.csv`, `transactions_v2.csv` and `members_v3.csv`) are in the repository root. Add the matching synthetic or authorised source file `user_logs_v2.csv` to the root directory before running the churn notebook from start to finish.
+The notebook uses a 70/30 random train/test split (`test_size=0.30`, `random_state=0`) and reports ROC-AUC, accuracy, precision, recall, F1, log-loss, a confusion matrix and a ROC curve after execution. The metric code is committed, but no newly generated metric values are published as verified results until the notebook has been run end-to-end against the current synthetic CSVs.
 
-## Project 2 — Cohort LTV & Break-Even CAC
+**Important modelling caveat:** the legacy notebook performs some learned preprocessing (including target-mean encoding, imputation, scaling, feature selection and PCA) before the split. This creates information leakage. Its evaluation is exploratory and should not be presented as an unbiased production estimate. The [model card](MODEL_CARD.md) describes limitations and the recommended leakage-safe redesign.
 
-The LTV notebook builds a transaction-level revenue ledger, calculates retention by acquisition channel, produces a registration-cohort retention heatmap, estimates cumulative LTV, and derives break-even and 3:1 target CAC ceilings at 6-, 12- and 24-month horizons.
+The feature-importance view maps PCA component importances back to original features using squared loadings; it is approximate and not causal. Segment churn rates are descriptive, not intervention effects.
 
-The model uses an exponential-decay assumption to extrapolate retention beyond the reliable observed window. Its CAC values are **modelled ceilings derived from synthetic revenue data**, not actual acquisition costs. No marketing-spend dataset is included, so the notebook does not calculate actual channel-level LTV:CAC performance.
+## SQL analytics
 
-**Notebook:** [kkbox_ltv_cac_analysis.ipynb](./kkbox_ltv_cac_analysis.ipynb)
+SQL files are in [sql/](sql/). They use SQLite-compatible CTEs and window functions. Load the CSV files into SQLite tables named after their file stems (without `.csv`) before running the queries. The SQL LTV query calculates observed revenue per subscriber; it is not the notebook's forward-looking LTV projection.
 
-**Inputs:** `members_v3.csv`, `transactions_v2.csv` and `train_v2.csv`. These files are committed in the repository root, and the notebook has been updated to read those exact filenames.
+## Reproducibility and quality
+
+- Pinned dependencies: [requirements.txt](requirements.txt)
+- MIT license: [LICENSE](LICENSE)
+- Ignore rules: [.gitignore](.gitignore)
+- Data dictionary and metric definitions: [data_dictionary.md](data_dictionary.md)
+- Model card: [MODEL_CARD.md](MODEL_CARD.md)
+- Automated data-contract tests: [tests/](tests/)
+- GitHub Actions CI: [.github/workflows/ci.yml](.github/workflows/ci.yml)
+
+Run tests locally with `pytest -q`.
+
+## LTV interpretation and stakeholder use
+
+LTV and break-even CAC are scenario estimates based on synthetic revenue and an assumed retention-decay curve. Do not recommend real acquisition spend or claim a winning channel from this synthetic dataset. The notebook's decay assumption, sample eligibility and data cut-off materially affect projected LTV; validate on a hold-out cohort and sensitivity analysis before using the output for budget decisions.
 
 ## Repository structure
 
 ```
 kkbox-subscription-analytics/
+├── .github/workflows/ci.yml
+├── .gitignore
+├── LICENSE
+├── MODEL_CARD.md
 ├── README.md
+├── app.py
+├── data_dictionary.md
 ├── kkbox_churn_modeling.ipynb
 ├── kkbox_ltv_cac_analysis.ipynb
 ├── members_v3.csv
+├── requirements.txt
 ├── sample_submission_v2.csv
+├── scripts/generate_user_logs.py
+├── sql/
+│   ├── 01_cohort_retention.sql
+│   ├── 02_churn_by_segment.sql
+│   ├── 03_ltv_by_channel.sql
+│   └── 04_data_quality_checks.sql
+├── tests/test_data_contracts.py
 ├── train_v2.csv
-└── transactions_v2.csv
+├── transactions_v2.csv
+└── user_logs_v2.csv
 ```
-
-There are no separate data-generator scripts, no SQL files or SQL implementation, and no `input/` subdirectory in the current repository.
-
-## Getting started
-
-Clone the repository and install the Python dependencies:
-
-```bash
-git clone https://github.com/Lifewitdata/kkbox-subscription-analytics.git
-cd kkbox-subscription-analytics
-
-pip install pandas numpy matplotlib seaborn scikit-learn xgboost jupyter
-jupyter notebook
-```
-
-Open `kkbox_ltv_cac_analysis.ipynb` to run the LTV analysis with the CSV files included in the repository. To run `kkbox_churn_modeling.ipynb` fully, first add the missing `user_logs_v2.csv` input described above.
-
-## Tech stack
-
-Python, pandas, NumPy, Matplotlib, seaborn, scikit-learn, XGBoost and Jupyter Notebook.
-
