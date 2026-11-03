@@ -73,7 +73,13 @@ SQL files are in [sql/](sql/). They use SQLite-compatible CTEs and window functi
 - Automated data-contract tests: [tests/](tests/)
 - GitHub Actions CI: [.github/workflows/ci.yml](.github/workflows/ci.yml)
 
-Run tests locally with `pytest -q`.
+Load the CSV files into SQLite and run the SQL examples:
+
+```bash
+python scripts/load_sqlite.py
+```
+
+The database file is local and ignored by Git. Run tests locally with `pytest -q`.
 
 ## LTV interpretation and stakeholder use
 
@@ -88,6 +94,7 @@ kkbox-subscription-analytics/
 ├── LICENSE
 ├── MODEL_CARD.md
 ├── README.md
+├── STAKEHOLDER_BRIEF.md
 ├── app.py
 ├── data_dictionary.md
 ├── kkbox_churn_modeling.ipynb
@@ -96,6 +103,7 @@ kkbox-subscription-analytics/
 ├── requirements.txt
 ├── sample_submission_v2.csv
 ├── scripts/generate_user_logs.py
+├── scripts/load_sqlite.py
 ├── sql/
 │   ├── 01_cohort_retention.sql
 │   ├── 02_churn_by_segment.sql
