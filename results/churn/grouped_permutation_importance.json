@@ -7,6 +7,12 @@
   "correlation_threshold": 0.85,
   "groups": [
     [
+      "city"
+    ],
+    [
+      "registered_via"
+    ],
+    [
       "transaction_count"
     ],
     [
@@ -20,7 +26,17 @@
       "transaction_max_paid"
     ],
     [
+      "last_payment_method_id"
+    ],
+    [
+      "last_payment_plan_days",
       "last_plan_list_price"
+    ],
+    [
+      "last_is_auto_renew"
+    ],
+    [
+      "last_is_cancel"
     ],
     [
       "log_days"
@@ -51,24 +67,6 @@
     ],
     [
       "days_since_last_log"
-    ],
-    [
-      "city"
-    ],
-    [
-      "registered_via"
-    ],
-    [
-      "last_payment_method_id"
-    ],
-    [
-      "last_payment_plan_days"
-    ],
-    [
-      "last_is_auto_renew"
-    ],
-    [
-      "last_is_cancel"
     ]
   ],
   "permutation_repeats": 30,
