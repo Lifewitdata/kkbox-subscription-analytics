@@ -56,6 +56,8 @@ def build_features() -> tuple[pd.DataFrame, pd.Series, pd.Series]:
     member_features["registration_init_time_parsed"] = pd.to_datetime(
         member_features["registration_init_time_parsed"], errors="coerce"
     )
+    for categorical_column in ("city", "registered_via"):
+        member_features[categorical_column] = member_features[categorical_column].astype("string")
 
     transactions = transactions.dropna(subset=["transaction_date_parsed"]).copy()
     transactions = transactions.sort_values(["msno", "transaction_date_parsed"])
@@ -72,6 +74,11 @@ def build_features() -> tuple[pd.DataFrame, pd.Series, pd.Series]:
     tx_agg["last_is_auto_renew"] = tx_last["is_auto_renew"]
     tx_agg["last_is_cancel"] = tx_last["is_cancel"]
     tx_agg["last_transaction_date"] = tx_last["transaction_date_parsed"]
+    for categorical_column in (
+        "last_payment_method_id", "last_payment_plan_days",
+        "last_is_auto_renew", "last_is_cancel",
+    ):
+        tx_agg[categorical_column] = tx_agg[categorical_column].astype("string")
 
     logs = logs.dropna(subset=["date_parsed"]).copy()
     log_agg = logs.groupby("msno").agg(
