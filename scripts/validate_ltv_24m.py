@@ -159,6 +159,16 @@ def score_fold(
     params_by_channel = {}
     global_params = estimate_channel(train, tx)
     global_forecast = global_params["forecast_ltv_24m"]
+    # Benchmark: actual 24-month revenue mean from earlier matured cohorts only.
+    train_tx_24 = get_transactions(train, tx, HORIZON_MONTHS)
+    train_24m_per_user = (
+        train_tx_24.groupby("msno")["actual_amount_paid"]
+        .sum().reindex(train["msno"], fill_value=0.0)
+    )
+    train_with_ltv = train[["msno", "channel"]].copy()
+    train_with_ltv["observed_ltv_24m"] = train_with_ltv["msno"].map(train_24m_per_user).fillna(0.0)
+    global_historical_mean = float(train_with_ltv["observed_ltv_24m"].mean())
+    baseline_by_channel = train_with_ltv.groupby("channel")["observed_ltv_24m"].mean().to_dict()
     training_channels = sorted(train["channel"].dropna().unique())
 
     for channel in training_channels:
@@ -178,10 +188,16 @@ def score_fold(
     # Channel codes not present in the earlier cohorts use the global baseline.
     holdout = holdout.copy()
     holdout["predicted_ltv_24m"] = holdout["channel"].map(predicted_by_channel).fillna(global_forecast)
+    holdout["baseline_historical_mean_24m"] = (
+        holdout["channel"].map(baseline_by_channel).fillna(global_historical_mean)
+    )
     holdout_tx = get_transactions(holdout, tx, HORIZON_MONTHS)
     actual = holdout_tx.groupby("msno")["actual_amount_paid"].sum()
     holdout["actual_ltv_24m"] = holdout["msno"].map(actual).fillna(0.0)
     holdout["absolute_error"] = (holdout["actual_ltv_24m"] - holdout["predicted_ltv_24m"]).abs()
+    holdout["baseline_absolute_error"] = (
+        holdout["actual_ltv_24m"] - holdout["baseline_historical_mean_24m"]
+    ).abs()
     holdout["fold"] = fold_number
     holdout["training_cohorts"] = ",".join(train_months)
     holdout["holdout_cohort"] = holdout_month
@@ -194,6 +210,7 @@ def score_fold(
         p = params_by_channel.get(channel, global_params)
         actual_mean = float(group["actual_ltv_24m"].mean())
         forecast_mean = float(group["predicted_ltv_24m"].mean())
+        baseline_mean = float(group["baseline_historical_mean_24m"].mean())
         rows.append({
             "fold": fold_number,
             "training_cohorts": ",".join(train_months),
@@ -207,9 +224,12 @@ def score_fold(
             "active_rate_month_6": float(p["active_rate_month_6"]),
             "historical_mean_ltv_6m": float(p["historical_mean_ltv_6m"]),
             "forecast_ltv_24m": forecast_mean,
+            "baseline_historical_mean_24m": baseline_mean,
             "actual_ltv_24m": actual_mean,
             "mae": float(group["absolute_error"].mean()),
             "wape": float(group["absolute_error"].sum() / max(group["actual_ltv_24m"].sum(), 1e-9)),
+            "baseline_mae": float(group["baseline_absolute_error"].mean()),
+            "baseline_wape": float(group["baseline_absolute_error"].sum() / max(group["actual_ltv_24m"].sum(), 1e-9)),
             "mean_bias_forecast_minus_actual": forecast_mean - actual_mean,
         })
     return rows, holdout
@@ -255,6 +275,7 @@ def run_validation() -> dict:
     abs_error = predictions_df["absolute_error"].to_numpy()
     actual = predictions_df["actual_ltv_24m"].to_numpy()
     predicted = predictions_df["predicted_ltv_24m"].to_numpy()
+    baseline = predictions_df["baseline_historical_mean_24m"].to_numpy()
     total_actual = float(actual.sum())
     summary = {
         "dataset": "synthetic KKBox-schema demonstration data",
@@ -270,6 +291,16 @@ def run_validation() -> dict:
         "mean_forecast_bias": float(np.mean(predicted - actual)),
         "mean_actual_ltv_24m": float(np.mean(actual)),
         "mean_predicted_ltv_24m": float(np.mean(predicted)),
+        "baseline_historical_mean_ltv_24m": float(np.mean(baseline)),
+        "baseline_mae": float(np.mean(np.abs(baseline - actual))),
+        "baseline_rmse": float(np.sqrt(np.mean((baseline - actual) ** 2))),
+        "baseline_wape": float(np.sum(np.abs(baseline - actual)) / max(total_actual, 1e-9)),
+        "decay_model_wape_improvement_vs_baseline": float(
+            1.0 - (
+                np.sum(np.abs(predicted - actual))
+                / max(np.sum(np.abs(baseline - actual)), 1e-9)
+            )
+        ),
         "scope": (
             "24-month transaction revenue scenario validation on matured synthetic cohorts; "
             "not contribution-margin LTV, real KKBox performance or production forecasting"
