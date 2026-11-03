@@ -113,6 +113,10 @@ The forecast is a historical channel-mean baseline for six-month observed revenu
 
 **Retention experiment design check:** randomized placebo assignment over historical labels returned +0.084 percentage points, 95% CI −1.466 to +1.634 pp, p = 0.916. No retention offer was delivered; this is a null-effect design check, not an estimate of intervention uplift.
 
+### Correlation-aware model reliance
+
+On the same 1,644-subscriber chronological churn hold-out, the largest grouped-permutation ROC-AUC drop was **0.1824** for days_since_last_transaction (30 row permutations). This is held-out predictive reliance under the declared grouping procedure, not a causal effect. The analysis uses training-only Spearman, Cramer's V and correlation-ratio associations to group highly associated raw features before jointly shuffling them. Permutation-repeat ranges are not population confidence intervals.
+
 ## SQL execution and tests
 
 SQL files live in sql/. Execute them with:
@@ -142,17 +146,15 @@ Run scripts/validate_ltv_24m.py. Only fully matured signup cohorts with 24 calen
 
 **Latest executed result on this synthetic dataset:**
 
-| Metric | Decay scenario |
-|---|---:|
-| Rolling monthly hold-out folds | 2 |
-| Hold-out subscribers across folds | 1,509 |
-| 24-month WAPE | **57.63%** |
-| 24-month MAE | 1,307.78 source amount units |
-| 24-month RMSE | 1,633.05 source amount units |
-| Mean forecast bias | +1,099.89 source amount units |
-| Mean actual 24-month revenue | 2,269.28 source amount units |
-| Mean predicted 24-month revenue | 3,369.16 source amount units |
-| Subscriber-bootstrap 95% WAPE interval | 54.07%–61.42% |
+| Metric | Decay scenario | Prior-cohort mean baseline |
+|---|---:|---:|
+| Rolling monthly hold-out folds | 2 | 2 |
+| Hold-out subscribers across folds | 1,509 | 1,509 |
+| 24-month WAPE | **57.63%** | **43.55%** |
+| 24-month MAE | 1,307.78 source amount units | 988.37 source amount units |
+| 24-month RMSE | 1,633.05 source amount units | 1,157.00 source amount units |
+
+Additional decay-model diagnostics: mean forecast bias **+1,099.89** source amount units per subscriber; mean actual revenue 2,269.28; mean predicted revenue 3,369.16; subscriber-bootstrap 95% WAPE interval 54.07%–61.42%. The decay method's WAPE is 32.3% worse than the historical-mean benchmark.
 
 The decay scenario over-forecasts on average and its two-fold backtest is weak evidence because the available source cutoff (2017-03-31) leaves only three fully matured monthly signup cohorts (2015-01 through 2015-03). The subscriber bootstrap interval measures subscriber-sampling variation only; it does not include decay/model-form, cohort, attribution, margin, or synthetic-data uncertainty. The script also produces a decay-rate sensitivity table. This is a measured backtest, not a claim that the 24-month scenario is reliable or suitable for budgeting.
 
