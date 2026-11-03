@@ -94,3 +94,42 @@ def test_ltv_validation_is_out_of_time_not_random():
     assert result["holdout_signup_months"]
     assert result["train_signup_months"][-1] < result["holdout_signup_months"][0]
     assert result["holdout_users"] > 0
+
+
+def test_24_month_ltv_rolling_backtest_outputs_exist_and_are_chronological():
+    path = ROOT / "results" / "ltv" / "out_of_time_24m_validation.json"
+    assert path.is_file()
+    result = json.loads(path.read_text())
+    assert result["target_horizon"] == "24 calendar months"
+    assert result["fold_count"] >= 2
+    assert result["training_and_holdout_subscribers"] > 0
+    assert result["matured_signup_months"] == sorted(result["matured_signup_months"])
+    assert np.isfinite(result["wape"])
+    fold_results = pd.read_csv(ROOT / "results" / "ltv" / "out_of_time_24m_by_fold_channel.csv")
+    for row in fold_results.itertuples(index=False):
+        last_train_month = row.training_cohorts.split(",")[-1]
+        assert last_train_month < row.holdout_cohort
+
+
+def test_grouped_permutation_importance_outputs_exist():
+    path = ROOT / "results" / "churn" / "grouped_permutation_importance.csv"
+    assert path.is_file()
+    importance = pd.read_csv(path)
+    assert not importance.empty
+    assert importance["feature_count"].ge(1).all()
+    assert importance["permutation_repeats"].eq(30).all()
+    assert importance["interpretation"].str.contains("not a causal effect").all()
+
+
+def test_retention_assignment_is_reproducible_and_balanced():
+    from prepare_retention_experiment import assign
+
+    eligible = pd.DataFrame({
+        "msno": [f"subscriber_{i:03d}" for i in range(101)],
+        "stratum": ["high"] * 51 + ["standard"] * 50,
+    })
+    first = assign(eligible, "test-secret")
+    second = assign(eligible, "test-secret")
+    pd.testing.assert_frame_equal(first, second)
+    counts = first.groupby(["stratum", "assigned_treatment"]).size().unstack(fill_value=0)
+    assert (counts.max(axis=1) - counts.min(axis=1)).max() <= 1
