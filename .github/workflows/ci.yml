@@ -28,18 +28,24 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
       - name: Execute SQL and persist result tables
         run: python scripts/run_sql_analytics.py
       - name: Train leakage-safe model and calculate held-out metrics
         run: python scripts/train_churn_model.py
       - name: Validate six-month LTV on later signup cohorts
         run: python scripts/validate_ltv.py
+      - name: Backtest 24-month decay LTV on rolling matured cohorts
+        run: python scripts/validate_ltv_24m.py
+      - name: Calculate correlation-aware held-out feature importance
+        run: python scripts/analyze_feature_importance.py
+      - name: Smoke-test the actual Streamlit app entry point
+        run: streamlit run app.py --server.headless true --server.port 8501 --server.address 127.0.0.1 &
       - name: Run randomized-assignment placebo design check
         run: python scripts/run_intervention_design_check.py
       - name: Build dashboard preview image
         run: python scripts/build_dashboard_preview.py
-      - name: Run automated tests
+      - name: Execute Streamlit AppTest and project test suite
         run: pytest -q
       - name: Upload reproducible model and analysis outputs
         uses: actions/upload-artifact@v4
@@ -52,7 +58,7 @@ jobs:
           if-no-files-found: error
           retention-days: 30
       - name: Commit verified generated outputs to this feature branch
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/fix/leakage-safe-analytics' }}
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/fix/streamlit-cloud-ltv24-experiment' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
