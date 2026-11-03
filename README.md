@@ -7,7 +7,7 @@ Churn prediction, cohort retention, customer segmentation and subscription LTV/C
 1. **Churn prediction** — feature engineering from member, transaction and listening activity; classifier comparison and XGBoost tuning; held-out classification metrics; exploratory feature attribution; segment churn diagnostics.
 2. **Cohort LTV and CAC** — retention by acquisition channel and signup month, observed revenue per subscriber, and decay-based LTV/CAC scenarios.
 3. **SQL analytics** — cohort retention, churn by plan/auto-renew/city, observed revenue by channel, and data-quality checks.
-4. **Streamlit dashboard** — headline churn, churn by registration channel, observed revenue per subscriber, and listening activity.
+4. **Streamlit dashboard** — headline churn, churn by registration channel, latest-log activity share by channel (clearly labelled as a snapshot, not matured retention), observed revenue per subscriber, and listening activity.
 
 ## Data files and naming contract
 
