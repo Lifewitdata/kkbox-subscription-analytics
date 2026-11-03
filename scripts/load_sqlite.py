@@ -13,10 +13,12 @@ def main() -> None:
             csv_path = ROOT / f"{table}.csv"
             if not csv_path.exists():
                 raise FileNotFoundError(csv_path)
+            conn.execute(f'DROP TABLE IF EXISTS "{table}"')
+            first_chunk = True
             for chunk in pd.read_csv(csv_path, chunksize=100_000):
-                chunk.to_sql(table, conn, if_exists="append" if conn.execute(
-                    "SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,)
-                ).fetchone() else "replace", index=False)
+                chunk.to_sql(table, conn, if_exists="replace" if first_chunk else "append",
+                             index=False)
+                first_chunk = False
             print(f"Loaded {table}")
     print(f"SQLite database created: {db_path}")
 
