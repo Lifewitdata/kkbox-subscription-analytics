@@ -1,0 +1,7 @@
+contribution_margin_assumption,holdout_contribution_ltv_mean,interpretation
+0.5,522.8806231943871,scenario only; margin is not present in the source data
+0.6,627.4567478332646,scenario only; margin is not present in the source data
+0.7,732.0328724721419,scenario only; margin is not present in the source data
+0.8,836.6089971110194,scenario only; margin is not present in the source data
+0.9,941.1851217498968,scenario only; margin is not present in the source data
+1.0,1045.7612463887742,scenario only; margin is not present in the source data

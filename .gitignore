@@ -11,3 +11,11 @@ artifacts/
 .streamlit/secrets.toml
 .DS_Store
 Thumbs.db
+
+# Local SQLite databases and transient caches
+*.sqlite
+*.db
+
+# Keep the reproducible trained pipeline in version control
+!models/
+!models/*.joblib

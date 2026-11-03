@@ -1,0 +1,22 @@
+{
+  "analysis": "intention_to_treat",
+  "outcome": "30-day retained-and-paying indicator",
+  "treatment_n": 2444,
+  "control_n": 2537,
+  "treatment_retention_rate": 0.9153027823240589,
+  "control_retention_rate": 0.9144659046117461,
+  "absolute_uplift_percentage_points": 0.0836877712312778,
+  "relative_uplift_percent": 0.09151546362661714,
+  "ci_95_low_percentage_points": -1.4664588067589501,
+  "ci_95_high_percentage_points": 1.633834349221506,
+  "two_sided_p_value_normal_approximation": 0.9157295082247248,
+  "limitations": [
+    "Requires randomized assignment and complete outcome follow-up.",
+    "Does not adjust for multiple tests or non-compliance; report assignment-based ITT.",
+    "An observational treatment flag is not a substitute for randomized assignment."
+  ],
+  "dataset": "synthetic historical labels with randomized placebo assignment",
+  "actual_offer_delivered": false,
+  "causal_intervention_effect_claimed": false,
+  "interpretation": "Null-effect randomization/design check only. This does not evaluate a retention offer, estimate real uplift, or establish that an intervention reduces churn."
+}

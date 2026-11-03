@@ -1,0 +1,40 @@
+{
+  "train_signup_months": [
+    "2015-01",
+    "2015-02",
+    "2015-03",
+    "2015-04",
+    "2015-05",
+    "2015-06",
+    "2015-07",
+    "2015-08",
+    "2015-09",
+    "2015-10",
+    "2015-11",
+    "2015-12",
+    "2016-01",
+    "2016-02",
+    "2016-03"
+  ],
+  "holdout_signup_months": [
+    "2016-04",
+    "2016-05",
+    "2016-06",
+    "2016-07",
+    "2016-08",
+    "2016-09",
+    "2016-10"
+  ],
+  "holdout_start_month": "2016-04",
+  "holdout_end_month": "2016-10",
+  "data_cutoff": "2017-03-31",
+  "complete_window_days": 180,
+  "train_users": 11898,
+  "holdout_users": 4846,
+  "mae": 383.5672478780211,
+  "rmse": 477.3698700455518,
+  "wape": 0.366782809367393,
+  "mean_forecast_bias": -6.670124948609911,
+  "forecast_method": "earlier-cohort channel mean 6-month revenue per subscriber",
+  "scope": "synthetic data; six-month observed revenue only; not 24-month decay validation"
+}
