@@ -223,6 +223,24 @@ Runtime setup is included in the repository: root requirements.txt contains only
 
 **Hosting status:** this repo is prepared and CI-tested, but a public app URL has not yet been issued. Deployment requires the repository owner's Streamlit Community Cloud sign-in and deploy action. I cannot create that account-level deployment or claim a URL before Streamlit issues it. The static screenshot remains only a preview.
 
+### Troubleshooting “Oh no. Error running your app.”
+
+This generic Community Cloud page does not identify the underlying error by itself. The app entry point now displays runtime versions, source-file presence/size, and the actual CSV-loading exception whenever Python reaches the Streamlit script.
+
+1. Open the deployed app and click **Manage app** in the lower-right corner.
+2. Open **Cloud logs** and copy the first Python traceback or dependency-install error. Streamlit documents Cloud logs as the primary troubleshooting location.
+3. In the app workspace, open the app menu → **Settings** and verify:
+   - Repository: Lifewitdata/kkbox-subscription-analytics
+   - Branch: main
+   - Main file: app.py
+   - Python: 3.12
+4. After changing requirements or app code, let Community Cloud finish redeploying. Then use **Reboot** from the app menu and clear cache if the old process is still active.
+5. If the Cloud logs contain no Python exception and only the generic “Oh no” state, check the resource-limit guidance. Streamlit says this can indicate that the app exceeded its available CPU or memory.
+
+The dashboard now reads only the columns it uses (rather than loading every raw column), validates all four required CSVs before rendering, and shows any data-loading/rendering exception on the page. The production runtime uses only Streamlit, pandas and NumPy; model training dependencies remain in requirements-dev.txt and are not installed by Community Cloud.
+
+**Important:** a passing GitHub Actions test proves the code starts in the CI environment; it does not expose private Community Cloud logs or prove that the correct repository/branch/entrypoint is selected in your Streamlit workspace. If the app still fails after redeployment, the first traceback from Manage app → Cloud logs is required to identify the exact remaining cause.
+
 ## Model card, stakeholder use and limits
 
 - MODEL_CARD.md documents intended use, feature timing, validation and limitations.
